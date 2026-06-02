@@ -1,0 +1,39 @@
+@echo off
+echo Starte Jetson ROS2 Workspace und Nodes...
+
+:: 1. Hauptbefehl (Container starten)
+echo jetson-containers run --name mein_roboter --device /dev/ttyTHS1 --device /dev/ttyUSB0 --device /dev/video0 --volume /tmp/argus_socket:/tmp/argus_socket --runtime nvidia -v ~/ros2_ws:/workspace -w /workspace my_robot_base_yolo2 > putty_start.txt
+::echo jetson-containers run --name mein_roboter --device /dev/ttyTHS1 --device /dev/ttyUSB0 --volume /tmp/argus_socket:/tmp/argus_socket --runtime nvidia -v ~/ros2_ws:/workspace -w /workspace my_robot_base_yolo > putty_start.txt
+
+
+:: 2. Befehlsdateien für jeden spezifischen Node erstellen
+:: Hinweis: "source install/setup.bash" stellt sicher, dass die ROS 2-Pfade vor der Ausführung geladen sind. Ggf. anpassen, falls dein Setup-Skript woanders liegt.
+echo docker exec -it mein_roboter bash -c "source install/setup.bash && ros2 launch ldlidar_node ldlidar_auto.launch.py" > node1.txt
+echo docker exec -it mein_roboter bash -c "source install/setup.bash && ros2 run bno055 bno055 --ros-args --params-file bno055_params.yaml" > node2.txt
+echo docker exec -it mein_roboter bash -c "source install/setup.bash && ros2 run wall_follower_robot esp_serial_bridge" > node3.txt
+echo docker exec -it mein_roboter bash -c "source install/setup.bash && /workspace/install/ros_deep_learning/lib/ros_deep_learning/video_source --ros-args -p resource:="csi://0" -p width:=1280 -p height:=720 -p framerate:=10.0" > node4.txt
+echo docker exec -it mein_roboter bash -c "source install/setup.bash && ros2 run foxglove_bridge foxglove_bridge" > node5.txt
+
+:: Befehl für leere Terminals zur manuellen Nutzung
+echo docker exec -it mein_roboter bash > putty_exec.txt
+
+
+:: 3. Terminal 1: Startet den Container
+start putty.exe -ssh macjetson@macjetson -pw admin -t -m putty_start.txt
+
+:: 4. Wartezeit (erhöht auf 15 Sekunden, um sicherzustellen, dass der Container vollständig bereit ist, bevor die Nodes starten)
+timeout /t 15 /nobreak >nul
+
+:: 5. Starte die 5 Nodes in separaten Terminals
+start putty.exe -ssh macjetson@macjetson -pw admin -t -m node1.txt
+start putty.exe -ssh macjetson@macjetson -pw admin -t -m node2.txt
+start putty.exe -ssh macjetson@macjetson -pw admin -t -m node3.txt
+start putty.exe -ssh macjetson@macjetson -pw admin -t -m node4.txt
+start putty.exe -ssh macjetson@macjetson -pw admin -t -m node5.txt
+
+:: 6. Starte noch 3 leere Terminals für manuelle Eingaben (wie im ursprünglichen Skript verlangt)
+start putty.exe -ssh macjetson@macjetson -pw admin -t -m putty_exec.txt
+start putty.exe -ssh macjetson@macjetson -pw admin -t -m putty_exec.txt
+start putty.exe -ssh macjetson@macjetson -pw admin -t -m putty_exec.txt
+
+echo Skriptausführung beendet.
