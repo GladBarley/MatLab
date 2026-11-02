@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Denavit-Hartenberg Übungsgenerator</title>
+<style>
+  :root{
+    --bg:#0a0e1a;
+    --bg2:#0d1220;
+    --panel:#111726;
+    --panel2:#0e1523;
+    --border:#1e2a44;
+    --grid:#17203a;
+    --text:#e6ecf7;
+    --muted:#8394b3;
+    --cyan:#4fb6d9;
+    --cyan2:#2b7f9e;
+    --xcol:#4d9bf0;   /* x = blau */
+    --ycol:#35d07f;   /* y = grün */
+    --zcol:#ff4d6d;   /* z = rot  */
+    --link:#c5d2ea;
+    --joint:#4fb6d9;
+    --rev:#35d07f;
+    --accent:#ff4d6d;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"JetBrains Mono","SF Mono","Fira Code",ui-monospace,"Courier New",monospace;
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:22px 20px 60px}
+  header h1{font-size:19px;margin:0 0 3px;letter-spacing:.5px}
+  header p{margin:0;color:var(--muted);font-size:12.5px}
+  .tag{color:var(--cyan)}
+
+  .controls{
+    display:flex;flex-wrap:wrap;align-items:center;gap:14px;
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:14px 16px;margin:18px 0;
+  }
+  .ctrl{display:flex;align-items:center;gap:9px}
+  .ctrl label{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  input[type=range]{accent-color:var(--cyan);width:150px}
+  .count-badge{
+    display:inline-flex;justify-content:center;align-items:center;
+    min-width:30px;height:26px;padding:0 6px;border-radius:7px;
+    background:var(--bg2);border:1px solid var(--border);color:var(--cyan);font-weight:600;
+  }
+  .count-input{
+    width:56px;height:26px;padding:0 6px;border-radius:7px;text-align:center;
+    background:var(--bg2);border:1px solid var(--border);color:var(--cyan);font-weight:600;
+    font-family:inherit;font-size:13px;
+  }
+  .count-input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan) inset}
+  .count-hint{color:var(--muted);font-size:11px}
+  button{
+    font-family:inherit;font-size:13px;cursor:pointer;
+    background:var(--bg2);color:var(--text);border:1px solid var(--border);
+    border-radius:9px;padding:9px 15px;transition:.15s;
+  }
+  button:hover{border-color:var(--cyan);color:var(--cyan)}
+  button.primary{background:linear-gradient(180deg,#1a3a4a,#123040);border-color:var(--cyan2);color:#cdeefb}
+  button.primary:hover{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan) inset}
+  .spacer{flex:1}
+  .seed{color:var(--muted);font-size:11.5px}
+  .seed b{color:var(--cyan);font-weight:600}
+
+  .canvas{
+    position:relative;border:1px solid var(--border);border-radius:14px;overflow:hidden;
+    background:
+      radial-gradient(circle at 1px 1px, var(--grid) 1.4px, transparent 0) 0 0/26px 26px,
+      radial-gradient(120% 120% at 50% 0%, #0d1428 0%, var(--bg) 70%);
+  }
+  .canvas svg{display:block;width:100%;height:auto;touch-action:none}
+  .viewhint{position:absolute;left:14px;bottom:12px;font-size:11.5px;color:var(--muted);
+    background:rgba(12,21,38,.72);border:1px solid var(--border);border-radius:8px;padding:5px 10px;pointer-events:none}
+  .focushint{position:absolute;right:14px;top:12px;display:none;font-size:11.5px;color:var(--cyan);
+    background:rgba(12,21,38,.85);border:1px solid var(--cyan2);border-radius:8px;padding:5px 10px;pointer-events:none}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  @media(max-width:860px){.cols{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .panel h2{font-size:13px;margin:0 0 10px;color:var(--cyan);letter-spacing:.5px;text-transform:uppercase}
+  .panel h2 .sub{color:var(--muted);text-transform:none;letter-spacing:0;font-size:11px;font-weight:400}
+
+  .configstr{font-size:26px;letter-spacing:6px;font-weight:700;text-align:center;margin:6px 0 4px}
+  .configstr .R{color:#ffca57}.configstr .V{color:var(--rev)}.configstr .P{color:var(--cyan)}.configstr .T{color:#c58bff}
+  .dof{text-align:center;color:var(--muted);font-size:12px;margin-bottom:4px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  td.q{color:var(--accent);font-weight:700}
+  td.tp{font-weight:700}
+  .tp.R{color:#ffca57}.tp.V{color:var(--rev)}.tp.P{color:var(--cyan)}.tp.T{color:#c58bff}
+  tr:last-child td{border-bottom:none}
+
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:12px}
+  .legend .li{display:flex;gap:8px;align-items:flex-start}
+  .legend .k{font-weight:700;min-width:16px}
+  .legend .k.R{color:#ffca57}.legend .k.V{color:var(--rev)}.legend .k.P{color:var(--cyan)}.legend .k.T{color:#c58bff}
+  .legend .d{color:var(--muted)}
+
+  .matbox{overflow-x:auto}
+  .mat{display:inline-flex;flex-direction:column;margin:4px 12px 8px 0;vertical-align:top}
+  .mat .cap{color:var(--cyan);font-size:12px;margin-bottom:2px}
+  .mat table{width:auto}
+  .mat td{border:none;padding:2px 8px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+  .mat .brace{border-left:2px solid var(--muted);border-right:2px solid var(--muted);border-radius:3px}
+  .matnote{margin-top:6px;color:var(--muted);font-size:12px}
+  .matnote tspan{fill:currentColor}
+
+  .hint{color:var(--muted);font-size:11.5px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}
+  .solutionWrap.hidden{display:none}
+  .note{font-size:11.5px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:14px}
+  .note b{color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Denavit&#8211;Hartenberg <span class="tag">Übungsgenerator</span></h1>
+    <p>Zufällige Manipulatoren mit R/T/V/P&#8211;Gelenken &#183; automatisch korrekt aufgestellte Koordinatensysteme nach DH&#8211;Konvention</p>
+  </header>
+
+  <div class="controls">
+    <div class="ctrl">
+      <label for="nj">Gelenke (DoF)</label>
+      <input type="range" id="nj" min="2" max="15" value="3">
+      <input type="number" id="njv" class="count-input" min="2" step="1" value="3" title="Beliebige Anzahl eintippbar">
+      <span class="count-hint" id="njhint"></span>
+    </div>
+    <div class="ctrl">
+      <button class="primary" id="gen">&#8635; Neuer Roboter</button>
+    </div>
+    <div class="ctrl">
+      <button id="sol">Lösung anzeigen</button>
+    </div>
+    <div class="ctrl">
+      <button id="resetView">&#8962; Ansicht zurücksetzen</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="seed">Seed: <b id="seed">&#8212;</b></div>
+  </div>
+
+  <div class="canvas">
+    <svg id="scene" viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="viewhint">&#128257; Ziehen zum Drehen &#183; Scrollen zum Zoomen &#183; Gelenk anklicken = isolieren</div>
+    <div class="focushint" id="focusHint"></div>
+  </div>
+
+  <div class="solutionWrap hidden" id="solWrap">
+    <div class="cols">
+      <div class="panel">
+        <h2>2.1 &#183; Konfiguration <span class="sub">(R,T,V,P)</span></h2>
+        <div class="configstr" id="configstr"></div>
+        <div class="dof" id="dofline"></div>
+      </div>
+      <div class="panel">
+        <h2>Gelenktypen &#183; Legende</h2>
+        <div class="legend">
+          <div class="li"><span class="k R">R</span><span class="d">Drehgelenk (Rotation), Achse <b>&#8869; zu beiden</b> Gliedern (Ellbogen). Variable <b>&#952;</b>.</span></div>
+          <div class="li"><span class="k T">T</span><span class="d">Drehgelenk (Torsion), Achse <b>&#8741; zu beiden</b> Gliedern (Drehung um die Armachse). Variable <b>&#952;</b>.</span></div>
+          <div class="li"><span class="k V">V</span><span class="d">Drehgelenk (Revolver), Achse <b>&#8741; zu einem</b>, <b>&#8869; zum anderen</b> Glied. Variable <b>&#952;</b>.</span></div>
+          <div class="li"><span class="k P">P</span><span class="d">Schubgelenk (Translation), lineares Verschieben entlang der Achse. Variable <b>d</b>.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <h2>2.2 &#183; Denavit&#8211;Hartenberg Parameter <span class="sub">&#952; und d in Grad/Einheiten &#183; <span style="color:var(--accent)">q&#7522;</span> = veränderliche Gelenkkoordinate</span></h2>
+      <table id="dhtable"></table>
+      <div class="hint">Standard&#8211;DH: <span class="tag">&#7522;&#8722;&#185;A&#7522; = Rot(z,&#952;&#7522;)&#183;Trans(z,d&#7522;)&#183;Trans(x,a&#7522;)&#183;Rot(x,&#945;&#7522;)</span>. z&#7522;&#8321; ist die Gelenkachse von Gelenk i, x&#7522; die gemeinsame Normale.</div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <h2>2.3 / 2.4 &#183; Transformationsmatrizen <span class="sub">(symbolisch, mit Gelenkvariablen q&#7522;)</span></h2>
+      <div class="matbox" id="mats"></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Hinweis:</b> <b>R</b>, <b>T</b> und <b>V</b> sind alle <b>Drehgelenke</b> (Gelenkvariable &#952;) &#8211; sie unterscheiden sich nur durch die Lage der Gelenkachse relativ zum Eingangs&#8209; und Ausgangsglied (siehe Legende). <b>P</b> ist das einzige <b>Schubgelenk</b> (Gelenkvariable d).
+    Der Buchstabe wird aus der tatsächlich gezeichneten Geometrie gemessen; die <b>Koordinatensysteme sind immer DH&#8209;korrekt</b>, da jeder Roboter aus DH&#8209;Parametern erzeugt wird.
+    <b>Tipp:</b> Auf ein Gelenk klicken isoliert es (Rest wird ausgegraut).
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   Denavit-Hartenberg Übungsgenerator
+   Roboter werden AUS DH-Parametern erzeugt -> Frames sind
+   per Konstruktion DH-konsistent.
+   ============================================================ */
+
+/* ---------- seeded RNG (mulberry32) ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+let RND=Math.random;
+const rint=(a,b)=>a+Math.floor(RND()*(b-a+1));
+const pick=arr=>arr[Math.floor(RND()*arr.length)];
+
+/* ---------- linear algebra (4x4) ---------- */
+const D=x=>x*Math.PI/180;
+function dhMat(th,d,a,al){
+  const ct=Math.cos(th),st=Math.sin(th),ca=Math.cos(al),sa=Math.sin(al);
+  return [[ct,-st*ca, st*sa, a*ct],
+          [st, ct*ca,-ct*sa, a*st],
+          [0,     sa,    ca,  d  ],
+          [0,      0,     0,  1  ]];
+}
+function mul(A,B){const R=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=A[i][k]*B[k][j];R[i][j]=s;}return R;}
+const colv=(M,j)=>[M[0][j],M[1][j],M[2][j]];
+const orig =M=>[M[0][3],M[1][3],M[2][3]];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+const scl=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const len=a=>Math.hypot(a[0],a[1],a[2]);
+const nrm=a=>{const l=len(a)||1;return [a[0]/l,a[1]/l,a[2]/l];};
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+
+/* ---------- orbit camera (orthographic look-at, world +Z = up) ---------- */
+/* Proper right-handed view: +z points TOWARD the viewer, so a right-hand-rule
+   positive rotation (+x -> +y) renders counter-clockwise on screen. */
+const CAM_DEFAULT={az:-0.62, el:0.58};
+const cam={az:CAM_DEFAULT.az, el:CAM_DEFAULT.el, scale:1, ox:500, oy:320};
+let CR=[1,0,0], CU=[0,0,1];               // cached right / up world vectors
+function updateCam(){
+  const ca=Math.cos(cam.az),sa=Math.sin(cam.az),ce=Math.cos(cam.el),se=Math.sin(cam.el);
+  CR=[-sa, ca, 0];                        // right = (-forward) x up   (normalised)
+  CU=[-ca*se,-sa*se,ce];                  // camera up
+}
+const proj=p=>[ p[0]*CR[0]+p[1]*CR[1]+p[2]*CR[2], -(p[0]*CU[0]+p[1]*CU[1]+p[2]*CU[2]) ];
+
+/* ---------- robot generation ----------
+   Joint letters (course convention, all revolute except P):
+     T  Torsion : joint axis parallel to BOTH links
+     R  Rotation: joint axis perpendicular to BOTH links
+     V  Revolver: axis parallel to one link, perpendicular to the other
+     P  Schub   : prismatic (translation)
+   Robots are built from DH parameters (frames are DH-correct by construction);
+   each link is a single straight segment (only one of a_i / d_i is non-zero),
+   and the letter is then MEASURED from the real geometry.                     */
+function genRobot(n){
+  const joints=[];
+  const frames=[ [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]] ]; // base frame O0 = identity
+
+  for(let i=1;i<=n;i++){
+    const revolute = RND()<0.6;                 // ~60% Dreh-, 40% Schubgelenke
+    let thetaDeg, dVal, aVal, alphaDeg, variable, nominal;
+    alphaDeg = pick([0,90,-90]);                // link twist between z_{i-1} and z_i
+
+    if(revolute){
+      variable='theta'; thetaDeg=0; nominal=0;
+      // straight output link: either along x_i (a) or along z_{i-1} (d)
+      if(RND()<0.5){ aVal=pick([1.5,2,2.5]); dVal=0; }
+      else         { aVal=0; dVal=pick([1.5,2]); }
+    } else {
+      variable='d'; thetaDeg=pick([0,90]); aVal=0; dVal=pick([1.7,2.2]); nominal=dVal;
+    }
+
+    if(i===1){                                  // floor-mounted base, vertical stand
+      thetaDeg=0; alphaDeg=pick([0,90,-90]);
+      if(revolute){ if(aVal===0) dVal=Math.max(dVal,1); else dVal=0; }
+      else { dVal=Math.max(dVal,1.6); nominal=dVal; }
+    }
+
+    const A=dhMat(D(thetaDeg),dVal,aVal,D(alphaDeg));
+    frames.push(mul(frames[i-1],A));
+    joints.push({i,revolute,thetaDeg,dVal,aVal,alphaDeg,variable,nominal,letter:'?'});
+  }
+
+  // ---- measure each joint's letter from the drawn geometry ----
+  const linkDir=k=>{                            // direction of link k (O_{k-1} -> O_k)
+    const v=sub(orig(frames[k]),orig(frames[k-1]));
+    return len(v)>1e-6?nrm(v):null;
+  };
+  for(let i=1;i<=n;i++){
+    const j=joints[i-1];
+    if(!j.revolute){ j.letter='P'; continue; }
+    const axis=colv(frames[i-1],2);                          // joint axis = z_{i-1}
+    const outD=linkDir(i);                                   // output link
+    const inD =(i>=2)?linkDir(i-1):[0,0,1];                  // input link (base stand = vertical)
+    const par=v=> v?Math.abs(dot(axis,v))>0.7:false;
+    const pIn=par(inD), pOut=par(outD);
+    j.letter = (pIn&&pOut)?'T' : (!pIn&&!pOut)?'R' : 'V';
+  }
+  return {n,joints,frames};
+}
+
+/* ---------- SVG drawing helpers ---------- */
+const NS='http://www.w3.org/2000/svg';
+const toS = p => { const q=proj(p); return [cam.ox+cam.scale*q[0], cam.oy+cam.scale*q[1]]; };
+
+function el(tag,attrs,inner){
+  let s='<'+tag;
+  for(const k in attrs) s+=' '+k+'="'+attrs[k]+'"';
+  s+= inner!=null ? '>'+inner+'</'+tag+'>' : '/>';
+  return s;
+}
+function line(a,b,color,w,dash){
+  return el('line',{x1:a[0].toFixed(1),y1:a[1].toFixed(1),x2:b[0].toFixed(1),y2:b[1].toFixed(1),
+    stroke:color,'stroke-width':w,'stroke-linecap':'round',...(dash?{'stroke-dasharray':dash}:{})});
+}
+function arrow(a,b,color,w){       // a,b in screen coords
+  const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
+  const hl=10,hw=5.5;
+  const tip=b;
+  const p1=[b[0]-hl*Math.cos(ang)+hw*Math.sin(ang), b[1]-hl*Math.sin(ang)-hw*Math.cos(ang)];
+  const p2=[b[0]-hl*Math.cos(ang)-hw*Math.sin(ang), b[1]-hl*Math.sin(ang)+hw*Math.cos(ang)];
+  const base=[b[0]-hl*0.7*Math.cos(ang), b[1]-hl*0.7*Math.sin(ang)];
+  return line(a,base,color,w)+
+    el('polygon',{points:`${tip[0].toFixed(1)},${tip[1].toFixed(1)} ${p1[0].toFixed(1)},${p1[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`,fill:color});
+}
+function text(p,str,color,size,anchor,weight){
+  return el('text',{x:p[0].toFixed(1),y:p[1].toFixed(1),fill:color,'font-size':size||13,
+    'font-family':'inherit','text-anchor':anchor||'middle','font-weight':weight||400,
+    'dominant-baseline':'middle'},str);
+}
+function labelBox(p,str,color){
+  const w=str.length*7.4+16, h=20;
+  return el('rect',{x:(p[0]-w/2).toFixed(1),y:(p[1]-h/2).toFixed(1),width:w.toFixed(1),height:h,
+      rx:6,fill:'#0c1526',stroke:color,'stroke-width':1.2,'fill-opacity':0.92})
+    + text([p[0],p[1]+0.5],str,color,12,'middle',600);
+}
+/* dimension line for a world segment A->B, offset to the side, with a length label */
+function dimLine(A,B,str){
+  const col='#93a6cc';
+  const aS=toS(A), bS=toS(B);
+  let dx=bS[0]-aS[0], dy=bS[1]-aS[1]; const L=Math.hypot(dx,dy)||1;
+  const ux=dx/L, uy=dy/L;
+  let px=-uy, py=ux;                                   // screen-space perpendicular
+  const mx=(aS[0]+bS[0])/2, my=(aS[1]+bS[1])/2;
+  if(px*(mx-cam.ox)+py*(my-cam.oy)<0){px=-px;py=-py;}  // push away from scene centre
+  const off=15;
+  const a2=[aS[0]+px*off, aS[1]+py*off], b2=[bS[0]+px*off, bS[1]+py*off];
+  let s='';
+  s+=line(aS,a2,col,1);                                // extension ticks
+  s+=line(bS,b2,col,1);
+  s+=arrow(b2,a2,col,1.2)+arrow(a2,b2,col,1.2);        // double-headed dimension line
+  const lp=[mx+px*(off+13), my+py*(off+13)];
+  s+=text(lp,str,'#b7c4de',12,'middle',600);
+  return s;
+}
+
+/* ---------- main render ---------- */
+let focusJoint=null;                   // null = show all, else joint index 1..n
+function render(robot,refit){
+  const {n,joints,frames}=robot;
+  const La=0.85;                       // axis length (world units)
+  updateCam();
+  const F=focusJoint;                                    // focused joint (or null)
+  const jOp=i=>(F==null||F===i)?1:0.08;                  // opacity: joint / link i
+  const fOp=f=>(F==null||f===F-1||f===F)?1:0.08;         // opacity: frame f
+  const bigN=n>8;                                        // declutter labels for long arms
+
+  // ---- collect points for framing (focused subset when a joint is isolated) ----
+  const pts=[];
+  const Wg=2.4; // base grid half size
+  const addPt=P=>pts.push(proj(P));
+  if(F==null){
+    [[-Wg,-Wg,0],[Wg,-Wg,0],[Wg,Wg,0],[-Wg,Wg,0]].forEach(addPt);
+    frames.forEach(Fr=>{ const o=orig(Fr); addPt(o); for(let j=0;j<3;j++) addPt(add(o,scl(colv(Fr,j),La))); });
+  } else {
+    [F-1,F].forEach(f=>{ const o=orig(frames[f]); addPt(o); for(let j=0;j<3;j++){ addPt(add(o,scl(colv(frames[f],j),La+0.4))); } });
+  }
+
+  let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  pts.forEach(p=>{minx=Math.min(minx,p[0]);miny=Math.min(miny,p[1]);maxx=Math.max(maxx,p[0]);maxy=Math.max(maxy,p[1]);});
+  const VW=1000,VH=640,pad=70;
+  const bw=maxx-minx||1, bh=maxy-miny||1;
+  if(refit) cam.scale = Math.min((VW-2*pad)/bw,(VH-2*pad)/bh);
+  cam.ox = pad - cam.scale*minx + ((VW-2*pad)-cam.scale*bw)/2;
+  cam.oy = pad - cam.scale*miny + ((VH-2*pad)-cam.scale*bh)/2;
+
+  let svg='';
+
+  /* ----- base ground plane ----- */
+  const gc=[[-Wg,-Wg,0],[Wg,-Wg,0],[Wg,Wg,0],[-Wg,Wg,0]].map(toS);
+  let ground=el('polygon',{points:gc.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' '),
+      fill:'#0e1730','fill-opacity':0.55,stroke:'#22304f','stroke-width':1});
+  for(let g=-2;g<=2;g++){
+    ground+=line(toS([g,-Wg,0]),toS([g,Wg,0]),'#1b2848',1);
+    ground+=line(toS([-Wg,g,0]),toS([Wg,g,0]),'#1b2848',1);
+  }
+  svg+=el('g',{opacity:(F==null?1:0.05)},ground);
+
+  /* ----- links (behind joints/frames) ----- */
+  for(let i=1;i<=n;i++){
+    const O0=orig(frames[i-1]), O1=orig(frames[i]);
+    const corner=add(O0,scl(colv(frames[i-1],2),joints[i-1].dVal));
+    svg+=el('g',{opacity:jOp(i)}, line(toS(O0),toS(corner),'#98a9cc',3.4)+line(toS(corner),toS(O1),'#98a9cc',3.4));
+  }
+
+  /* ----- coordinate frames ----- */
+  for(let i=0;i<=n;i++){
+    const Fr=frames[i], O=orig(Fr), Os=toS(O);
+    let g='';
+    [['x',colv(Fr,0),'#4d9bf0'],['y',colv(Fr,1),'#35d07f'],['z',colv(Fr,2),'#ff4d6d']].forEach(([nm,v,c])=>{
+      g+=arrow(Os,toS(add(O,scl(v,La))),c,2.4);
+      g+=text(toS(add(O,scl(v,La+0.16))), nm+'<tspan font-size="9" dy="3">'+i+'</tspan>', c,13,'middle',700);
+    });
+    g+=el('circle',{cx:Os[0].toFixed(1),cy:Os[1].toFixed(1),r:3,fill:'#e6ecf7'});
+    g+=text([Os[0]-16,Os[1]-14],'O<tspan font-size="9" dy="3">'+i+'</tspan>','#e6ecf7',13.5,'middle',700);
+    svg+=el('g',{opacity:fOp(i)},g);
+  }
+
+  /* ----- joints (symbol + label + variable + length), one clickable group each ----- */
+  const LC={R:'#ffca57',T:'#c58bff',V:'#35d07f',P:'#4fb6d9'};
+  for(let i=1;i<=n;i++){
+    const O=orig(frames[i-1]);
+    const z=colv(frames[i-1],2), x=colv(frames[i-1],0), y=colv(frames[i-1],1);
+    const j=joints[i-1];
+    let g='';
+
+    if(j.revolute){
+      const r=0.34; let pathPts=[];
+      for(let a=-20;a<=250;a+=10) pathPts.push(toS(add(O, add(scl(x,r*Math.cos(D(a))), scl(y,r*Math.sin(D(a)))))));
+      let dstr='M '+pathPts[0][0].toFixed(1)+' '+pathPts[0][1].toFixed(1);
+      for(let k=1;k<pathPts.length;k++) dstr+=' L '+pathPts[k][0].toFixed(1)+' '+pathPts[k][1].toFixed(1);
+      g+=el('path',{d:dstr,fill:'none',stroke:'#35d07f','stroke-width':2.4,'stroke-linecap':'round'});
+      g+=arrow(pathPts[pathPts.length-3],pathPts[pathPts.length-1],'#35d07f',2.4);
+      g+=el('circle',{cx:toS(O)[0].toFixed(1),cy:toS(O)[1].toFixed(1),r:3.4,fill:'#0e1730',stroke:'#35d07f','stroke-width':1.6});
+    } else {
+      const hw=0.24, hl=0.5;
+      const c=[ add(O,add(scl(x,hw),scl(z,-hl))), add(O,add(scl(x,hw),scl(z,hl))),
+                add(O,add(scl(x,-hw),scl(z,hl))), add(O,add(scl(x,-hw),scl(z,-hl))) ].map(toS);
+      g+=el('polygon',{points:c.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' '),
+          fill:'#0c2330','fill-opacity':0.65,stroke:'#4fb6d9','stroke-width':1.6,'stroke-dasharray':'4 3'});
+      g+=arrow(toS(O),toS(add(O,scl(z,0.62))),'#4fb6d9',2.2);
+      g+=arrow(toS(O),toS(add(O,scl(z,-0.62))),'#4fb6d9',2.2);
+    }
+
+    // length dimension of this (revolute) link, if it carries a fixed length
+    if(j.revolute){
+      const O1=orig(frames[i]);
+      if(len(sub(O1,O))>0.05) g+=dimLine(O,O1,'l'+sb(i)+'='+fmtN(Math.abs(j.aVal)>0.05?j.aVal:j.dVal));
+    }
+
+    // label box + variable annotation (hidden for non-focused joints when arm is long)
+    const showLabel = !bigN || F===i || F==null;
+    if(showLabel){
+      const lb=toS(add(O,add(scl(z,0.15),[0.9,0.9,0.75])));
+      g+=labelBox(lb,'Gelenk '+i+' ('+j.letter+')',LC[j.letter]||'#4fb6d9');
+      const vtxt = j.revolute
+        ? '&#952;<tspan font-size="9" dy="3">'+i+'</tspan><tspan dy="-3"> (rot.)</tspan>'
+        : 'd<tspan font-size="9" dy="3">'+i+'</tspan><tspan dy="-3"> (trans.)</tspan>';
+      g+=text([lb[0],lb[1]+20],vtxt, j.revolute?'#35d07f':'#4fb6d9',12,'middle',600);
+    }
+
+    // transparent hit area so the whole joint is easy to click
+    const hs=toS(O);
+    g+=el('circle',{cx:hs[0].toFixed(1),cy:hs[1].toFixed(1),r:22,fill:'#000','fill-opacity':0.001});
+
+    svg+=el('g',{'data-joint':i,style:'cursor:pointer',opacity:jOp(i)},g);
+  }
+
+  document.getElementById('scene').innerHTML=svg;
+  buildSolution(robot);
+}
+
+/* ---------- solution panels ---------- */
+const fmtA=deg=>{const d=Math.round(deg); return d+'&#176;';};
+const fmtN=v=>{const r=Math.round(v*100)/100; return (Object.is(r,-0)?0:r).toString();};
+
+function buildSolution(robot){
+  const {joints,frames,n}=robot;
+
+  // config string
+  const cs=joints.map(j=>'<span class="'+j.letter+'">'+j.letter+'</span>').join('');
+  document.getElementById('configstr').innerHTML=cs;
+  document.getElementById('dofline').textContent=n+' Freiheitsgrade  ·  Konfigurations-String: '+joints.map(j=>j.letter).join('');
+
+  // DH table
+  let t='<tr><th>i</th><th>&#952;&#7522;</th><th>d&#7522;</th><th>a&#7522;</th><th>&#945;&#7522;</th><th>Typ</th><th>q&#7522;</th></tr>';
+  joints.forEach(j=>{
+    const thV = j.revolute ? '<span class="q">q'+sb(j.i)+'</span>' : fmtA(j.thetaDeg);
+    const dV  = j.revolute ? fmtN(j.dVal) : '<span class="q">q'+sb(j.i)+'</span>';
+    const qinfo = j.revolute ? '&#952;'+sb(j.i) : 'd'+sb(j.i);
+    t+='<tr><td>'+j.i+'</td><td>'+thV+'</td><td>'+dV+'</td><td>'+fmtN(j.aVal)+'</td><td>'+fmtA(j.alphaDeg)+'</td>'
+      +'<td class="tp '+j.letter+'">'+j.letter+'</td><td class="q">'+qinfo+'</td></tr>';
+  });
+  document.getElementById('dhtable').innerHTML=t;
+
+  // symbolic transformation matrices (with joint variables q_i)
+  let m='';
+  for(let i=1;i<=n;i++) m+=matHTML((i-1)+'A'+i, symMat(joints[i-1]));
+  m+='<div class="matnote">&#8320;P'+sb(n)+' = &#8320;A&#8321; &#183; &#185;A&#8322; &#183; &#8230; &#183; '+(n-1)+'A'+sb(n)
+     +' &#8195;(q'+sb('i')+' = Gelenkvariable)</div>';
+  document.getElementById('mats').innerHTML=m;
+}
+function sb(i){return '<tspan font-size="9" dy="2">'+i+'</tspan>';}
+/* symbolic DH matrix: joint variable stays as c_i/s_i (revolute) or q_i (prismatic) */
+function symMat(j){
+  const i=j.i, a=j.aVal, d=j.dVal;
+  const ca=Math.round(Math.cos(D(j.alphaDeg))), sa=Math.round(Math.sin(D(j.alphaDeg)));
+  const ci='cos(q'+sb(i)+')', si='sin(q'+sb(i)+')';
+  const term=(coef,sym)=>{ if(coef===0||Object.is(coef,-0)) return '0';
+    return (coef<0?'-':'')+((Math.abs(coef)===1?'':fmtN(Math.abs(coef)))+sym); };
+  if(j.revolute){                                   // theta_i = q_i is variable
+    return [[ ci,        term(-ca,si), term(sa,si),  term(a,ci) ],
+            [ si,        term(ca,ci),  term(-sa,ci), term(a,si) ],
+            ['0',        fmtN(sa),     fmtN(ca),     fmtN(d)    ],
+            ['0','0','0','1']];
+  }
+  const cth=Math.cos(D(j.thetaDeg)), sth=Math.sin(D(j.thetaDeg)), q='q'+sb(i);  // d_i = q_i variable
+  return [[ fmtN(cth), fmtN(-sth*ca), fmtN(sth*sa), fmtN(a*cth) ],
+          [ fmtN(sth), fmtN(cth*ca),  fmtN(-cth*sa),fmtN(a*sth) ],
+          ['0',        fmtN(sa),      fmtN(ca),     q           ],
+          ['0','0','0','1']];
+}
+function matHTML(cap,M){
+  let rows='';
+  for(let r=0;r<4;r++){
+    rows+='<tr>';
+    for(let c=0;c<4;c++){ let v=M[r][c];
+      if(typeof v==='number'){ v=Math.round(v*100)/100; if(Object.is(v,-0))v=0; v=''+v; }
+      rows+='<td>'+v+'</td>'; }
+    rows+='</tr>';
+  }
+  const capH=cap.replace(/^(\d)/,'<tspan font-size="9" dy="-5">$1</tspan><tspan dy="5"></tspan>')
+               .replace(/([A-Za-z])(\d)$/,'$1<tspan font-size="9" dy="3">$2</tspan>');
+  return '<div class="mat"><div class="cap">'+capH+'</div><table class="brace">'+rows+'</table></div>';
+}
+
+/* ---------- UI wiring ---------- */
+const njEl=document.getElementById('nj'), njv=document.getElementById('njv'), njhint=document.getElementById('njhint');
+let showSol=false, currentRobot=null;
+function getN(){ return Math.max(2, Math.floor(+njv.value)||2); }   // typeable, no upper limit
+function regenerate(seed){
+  const s = seed!=null ? seed : (Math.floor(Math.random()*1e9));
+  RND=mulberry32(s);
+  document.getElementById('seed').textContent=s;
+  const n=getN();
+  njhint.textContent = n>+njEl.max ? '(viele Gelenke – ggf. isolieren/zoomen)' : '';
+  focusJoint=null;
+  currentRobot=genRobot(n);
+  render(currentRobot,true);
+  updateFocusHint();
+}
+function setFocus(i){
+  focusJoint = (i===focusJoint)?null:i;   // click same joint again -> release
+  if(currentRobot) render(currentRobot,true);
+  updateFocusHint();
+}
+function updateFocusHint(){
+  const h=document.getElementById('focusHint');
+  if(!h) return;
+  h.style.display = focusJoint? 'block':'none';
+  if(focusJoint){
+    const j=currentRobot.joints[focusJoint-1];
+    h.textContent='Gelenk '+focusJoint+' ('+j.letter+') isoliert · Klick ins Leere zum Aufheben';
+  }
+}
+njEl.addEventListener('input',()=>{ njv.value=njEl.value; regenerate(); });                 // slider -> field
+njv.addEventListener('change',()=>{ njv.value=getN(); njEl.value=Math.min(getN(),+njEl.max); regenerate(); }); // typed -> slider thumb clamps, value unbounded
+document.getElementById('gen').addEventListener('click',()=>regenerate());
+
+/* ---------- 3D orbit interaction ---------- */
+const scene=document.getElementById('scene');
+let drag=null, raf=0;
+function redraw(){ if(currentRobot) render(currentRobot,false); raf=0; }
+function schedule(){ if(!raf) raf=requestAnimationFrame(redraw); }
+function svgScale(){ const r=scene.getBoundingClientRect(); return 1000/(r.width||1000); } // px -> viewBox units
+scene.style.cursor='grab';
+scene.addEventListener('pointerdown',e=>{
+  drag={x:e.clientX,y:e.clientY,az:cam.az,el:cam.el,moved:false};
+  scene.setPointerCapture(e.pointerId); scene.style.cursor='grabbing';
+});
+scene.addEventListener('pointermove',e=>{
+  if(!drag) return;
+  if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)>4) drag.moved=true;
+  const k=0.0075;
+  cam.az = drag.az + (e.clientX-drag.x)*k*svgScale();
+  cam.el = Math.max(0.06, Math.min(1.45, drag.el - (e.clientY-drag.y)*k*svgScale()));
+  schedule();
+});
+function endDrag(e){
+  if(!drag) return;
+  const wasClick=!drag.moved, cx=e.clientX, cy=e.clientY;
+  drag=null; scene.style.cursor='grab';
+  try{scene.releasePointerCapture(e.pointerId);}catch(_){}
+  if(wasClick){
+    const t=document.elementFromPoint(cx,cy);
+    const grp=t&&t.closest&&t.closest('[data-joint]');
+    setFocus(grp? +grp.getAttribute('data-joint') : null);   // empty click -> release
+  }
+}
+scene.addEventListener('pointerup',endDrag);
+scene.addEventListener('pointercancel',e=>{drag=null;scene.style.cursor='grab';});
+scene.addEventListener('wheel',e=>{
+  e.preventDefault();
+  cam.scale *= Math.exp(-e.deltaY*0.0012);
+  cam.scale = Math.max(12, Math.min(600, cam.scale));
+  schedule();
+},{passive:false});
+document.getElementById('resetView').addEventListener('click',()=>{
+  cam.az=CAM_DEFAULT.az; cam.el=CAM_DEFAULT.el; if(currentRobot) render(currentRobot,true);
+});
+document.getElementById('sol').addEventListener('click',e=>{
+  showSol=!showSol;
+  document.getElementById('solWrap').classList.toggle('hidden',!showSol);
+  e.target.textContent=showSol?'Lösung verbergen':'Lösung anzeigen';
+});
+regenerate(20250716);
+</script>
+</body>
+</html>

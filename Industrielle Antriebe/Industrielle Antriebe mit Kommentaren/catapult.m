@@ -7,7 +7,7 @@ close all; % Schließt alle geöffneten Abbildungsfenster
 y_all = []; % Initialisiert einen leeren Spaltenvektor für alle gemessenen y-Werte
 z_all = []; % Initialisiert einen leeren Spaltenvektor für alle gemessenen z-Werte
 
-% Laden der Messdaten aus den 10 Experimenten[span_4](end_span)
+% Laden der Messdaten aus den 10 Experimenten
 for i = 1:10 % Schleife über die 10 Versuchsdateien
     filename = sprintf('Catapult_Exp%d.mat', i); % Generiert den Dateinamen dynamisch
     data = load(filename); % Lädt die .mat-Datei in eine Datenstruktur

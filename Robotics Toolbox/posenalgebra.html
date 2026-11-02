@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Posenalgebra Übungsgenerator</title>
+<style>
+  :root{
+    --bg:#0a0e1a; --bg2:#0d1220; --panel:#111726; --panel2:#0e1523;
+    --border:#1e2a44; --grid:#17203a; --text:#e6ecf7; --muted:#8394b3;
+    --cyan:#4fb6d9; --cyan2:#2b7f9e; --green:#35d07f; --accent:#ff4d6d; --amber:#ffca57;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"JetBrains Mono","SF Mono","Fira Code",ui-monospace,"Courier New",monospace;
+    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:22px 20px 60px}
+  header h1{font-size:19px;margin:0 0 3px;letter-spacing:.5px}
+  header p{margin:0;color:var(--muted);font-size:12.5px}
+  .tag{color:var(--cyan)}
+
+  .controls{display:flex;flex-wrap:wrap;align-items:center;gap:14px;
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:18px 0;}
+  .ctrl{display:flex;align-items:center;gap:9px}
+  .ctrl label{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  input[type=range]{accent-color:var(--cyan);width:150px}
+  .count-badge{display:inline-flex;justify-content:center;align-items:center;min-width:30px;height:26px;padding:0 6px;
+    border-radius:7px;background:var(--bg2);border:1px solid var(--border);color:var(--cyan);font-weight:600;}
+  .count-input{width:56px;height:26px;padding:0 6px;border-radius:7px;text-align:center;background:var(--bg2);
+    border:1px solid var(--border);color:var(--cyan);font-weight:600;font-family:inherit;font-size:13px;}
+  .count-input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan) inset}
+  .count-hint{color:var(--muted);font-size:11px}
+  button{font-family:inherit;font-size:13px;cursor:pointer;background:var(--bg2);color:var(--text);
+    border:1px solid var(--border);border-radius:9px;padding:9px 15px;transition:.15s;}
+  button:hover{border-color:var(--cyan);color:var(--cyan)}
+  button.primary{background:linear-gradient(180deg,#1a3a4a,#123040);border-color:var(--cyan2);color:#cdeefb}
+  button.primary:hover{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan) inset}
+  .spacer{flex:1}
+  .seed{color:var(--muted);font-size:11.5px}
+  .seed b{color:var(--cyan);font-weight:600}
+
+  .canvas{position:relative;border:1px solid var(--border);border-radius:14px;overflow:hidden;
+    background:
+      radial-gradient(circle at 1px 1px, var(--grid) 1.4px, transparent 0) 0 0/26px 26px,
+      radial-gradient(120% 120% at 50% 0%, #0d1428 0%, var(--bg) 70%);}
+  .canvas svg{display:block;width:100%;height:auto}
+  .viewhint{position:absolute;left:14px;bottom:12px;font-size:11.5px;color:var(--muted);
+    background:rgba(12,21,38,.72);border:1px solid var(--border);border-radius:8px;padding:5px 10px;pointer-events:none}
+
+  .selbox{margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;
+    min-height:56px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .selbox .lead{color:var(--muted);font-size:12.5px}
+  .selbox .res{font-size:16px}
+  .chip{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+    border:1px solid var(--border);font-weight:700}
+  .chip.src{border-color:var(--green);color:var(--green)}
+  .chip.dst{border-color:var(--accent);color:var(--accent)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  @media(max-width:860px){.cols{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .panel h2{font-size:13px;margin:0 0 10px;color:var(--cyan);letter-spacing:.5px;text-transform:uppercase}
+  .panel h2 .sub{color:var(--muted);text-transform:none;letter-spacing:0;font-size:11px;font-weight:400}
+
+  ul.given{list-style:none;margin:0;padding:0}
+  ul.given li{padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:baseline}
+  ul.given li:last-child{border-bottom:none}
+  ul.given .mm{color:var(--muted);font-size:12px}
+
+  ol.tasks{margin:0;padding-left:22px}
+  ol.tasks li{padding:9px 0;border-bottom:1px solid var(--border)}
+  ol.tasks li:last-child{border-bottom:none}
+  .q{font-size:15px}
+  .sol{margin-top:7px;font-size:15px;color:var(--text)}
+  .sol .path{color:var(--muted);font-size:12px;margin-bottom:3px}
+  .solutionWrap.hidden{display:none}
+
+  /* pose notation */
+  .pose{white-space:nowrap;font-weight:600}
+  .pose .pre{vertical-align:super;font-size:.68em;margin-right:.5px}
+  .pose .post{vertical-align:sub;font-size:.68em;margin-left:.5px}
+  .pose sup{font-size:.68em}
+  .pose.g{color:var(--cyan)}          /* a given (measured) pose */
+  .pose.i{color:var(--amber)}         /* an inverted pose */
+  .op{color:var(--muted);margin:0 5px}
+
+  .legend{font-size:12.5px}
+  .legend .row{display:flex;gap:10px;padding:5px 0}
+  .legend .row b{color:var(--cyan);min-width:120px}
+  .note{font-size:11.5px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);
+    border-radius:10px;padding:10px 12px;margin-top:14px}
+  .note b{color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Posenalgebra <span class="tag">Übungsgenerator</span></h1>
+    <p>Zufällige Messszenarien &#183; relative Posen aus gemessenen Posen verketten (mit Inversen) &#8211; wie Aufgabe 3 der Probeklausur</p>
+  </header>
+
+  <div class="controls">
+    <div class="ctrl">
+      <label for="nf">Koordinatensysteme</label>
+      <input type="range" id="nf" min="4" max="9" value="5">
+      <input type="number" id="nfv" class="count-input" min="3" step="1" value="5" title="Beliebige Anzahl eintippbar">
+      <span class="count-hint" id="nfhint"></span>
+    </div>
+    <div class="ctrl"><button class="primary" id="gen">&#8635; Neue Aufgabe</button></div>
+    <div class="ctrl"><button id="sol">Lösung anzeigen</button></div>
+    <div class="spacer"></div>
+    <div class="seed">Seed: <b id="seed">&#8212;</b></div>
+  </div>
+
+  <div class="canvas">
+    <svg id="scene" viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="viewhint">&#128204; Pfeil = gemessene Pose (von &#8594; nach) &#183; Start- und Zielsystem anklicken</div>
+  </div>
+
+  <div class="selbox" id="selbox"><span class="lead">Klicke ein <b>Start&#8209;</b> und ein <b>Zielsystem</b>, um deren Relativpose herzuleiten.</span></div>
+
+  <div class="cols">
+    <div class="panel">
+      <h2>Gegebene Messungen <span class="sub">(gemessene Posen)</span></h2>
+      <ul class="given" id="given"></ul>
+    </div>
+    <div class="panel">
+      <h2>Rechenregeln &#183; Notation</h2>
+      <div class="legend">
+        <div class="row"><b><span class="pose"><span class="pre">x</span>P<span class="post">y</span></span></b><span class="d">Pose (Lage) von System <b>y</b> bezüglich System <b>x</b>.</span></div>
+        <div class="row"><b>Verkettung</b><span class="d"><span class="pose"><span class="pre">x</span>P<span class="post">z</span></span> = <span class="pose"><span class="pre">x</span>P<span class="post">y</span></span> &#183; <span class="pose"><span class="pre">y</span>P<span class="post">z</span></span></span></div>
+        <div class="row"><b>Inverse</b><span class="d"><span class="pose"><span class="pre">y</span>P<span class="post">x</span></span> = (<span class="pose"><span class="pre">x</span>P<span class="post">y</span></span>)<sup>-1</sup></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <h2>Aufgaben <span class="sub">&#183; gib die Relativpose an</span></h2>
+    <ol class="tasks" id="tasks"></ol>
+  </div>
+
+  <div class="note">
+    <b>Idee:</b> Suche im Baum den Weg vom Start&#8209; zum Zielsystem. Jede Kante entlang des Weges liefert einen Faktor:
+    liegt die gemessene Pose bereits in Laufrichtung vor, wird sie <b>direkt</b> verwendet (<span class="pose g"><span class="pre">a</span>P<span class="post">b</span></span>),
+    andernfalls <b>invertiert</b> (<span class="pose i">(<span class="pre">a</span>P<span class="post">b</span>)<sup>-1</sup></span>). Die Faktoren werden in Laufrichtung von links nach rechts multipliziert.
+  </div>
+</div>
+
+<script>
+/* ============ seeded RNG ============ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+let RND=Math.random;
+const rint=(a,b)=>a+Math.floor(RND()*(b-a+1));
+const pickI=arr=>arr[Math.floor(RND()*arr.length)];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(RND()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* ============ scenario generation ============ */
+let SC=null;              // current scenario
+let sel=[];              // selected node ids
+
+function labelName(k){    // 0->A, 25->Z, 26->AA, ...  (unbounded, always unique)
+  let s=''; k+=1;
+  while(k>0){ k--; s=String.fromCharCode(65+(k%26))+s; k=Math.floor(k/26); }
+  return s;
+}
+function genScenario(n){
+  const poolSize=Math.max(n,12);
+  const pool=[]; for(let i=0;i<poolSize;i++) pool.push(labelName(i));
+  const labels=shuffle(pool).slice(0,n);
+  const nodes=labels.map((L,i)=>({id:i,label:L}));
+  const parent={0:null}, children={}; nodes.forEach(nd=>children[nd.id]=[]);
+  const edges=[];
+  for(let i=1;i<n;i++){
+    const p=rint(0,i-1);          // attach to an earlier node -> random rooted tree
+    parent[i]=p; children[p].push(i);
+    // measured direction: mostly parent->child (like the exam), sometimes reversed
+    const m = RND()<0.62 ? [p,i] : [i,p];
+    edges.push({a:p,b:i,m});
+  }
+  // adjacency + edge lookup
+  const adj={}; nodes.forEach(nd=>adj[nd.id]=[]);
+  const ekey=(u,v)=>u<v?u+'-'+v:v+'-'+u;
+  const emap={};
+  edges.forEach(e=>{ adj[e.a].push(e.b); adj[e.b].push(e.a); emap[ekey(e.a,e.b)]=e; });
+
+  // tidy tree layout (top-down)
+  let leaf=0; const pos={};
+  (function place(u,depth){
+    const ks=children[u];
+    if(ks.length===0){ pos[u]={gx:leaf++,depth}; }
+    else { ks.forEach(k=>place(k,depth+1)); pos[u]={gx:ks.reduce((s,k)=>s+pos[k].gx,0)/ks.length,depth}; }
+  })(0,0);
+  const maxLeaf=Math.max(1,leaf-1);
+  const maxDepth=Math.max(...nodes.map(nd=>pos[nd.id].depth));
+
+  // path between two nodes (BFS)
+  function path(x,y){
+    const prev={}; prev[x]=-1; const Q=[x];
+    while(Q.length){ const u=Q.shift(); if(u===y) break; adj[u].forEach(v=>{ if(prev[v]===undefined){prev[v]=u;Q.push(v);} }); }
+    const p=[]; let c=y; while(c!==-1&&c!==undefined){ p.unshift(c); c=prev[c]; } return p;
+  }
+  // factors for path X..Y
+  function factors(x,y){
+    const p=path(x,y), fs=[];
+    for(let i=0;i<p.length-1;i++){
+      const u=p[i],v=p[i+1], e=emap[ekey(u,v)];
+      const inv=!(e.m[0]===u&&e.m[1]===v);
+      fs.push({from:e.m[0],to:e.m[1],inv});    // given pose = ^{from}P_{to}
+    }
+    return {p,fs};
+  }
+
+  // pick tasks: prefer longer paths, ensure at least some need an inverse
+  const pairs=[];
+  for(let x=0;x<n;x++)for(let y=0;y<n;y++) if(x!==y){ const {fs}=factors(x,y); pairs.push({x,y,len:fs.length,inv:fs.some(f=>f.inv)}); }
+  shuffle(pairs);
+  pairs.sort((A,B)=> (B.len-A.len));
+  const chosen=[]; const seen=new Set();
+  // grab a few longer / inverse-containing ones first, keep variety
+  for(const pr of pairs){ if(chosen.length>=4)break; const k=pr.x+'>'+pr.y; if(seen.has(k))continue;
+    if(pr.len>=2){ chosen.push(pr); seen.add(k);} }
+  for(const pr of pairs){ if(chosen.length>=4)break; const k=pr.x+'>'+pr.y; if(seen.has(k))continue; chosen.push(pr); seen.add(k);}
+
+  return {n,nodes,parent,children,edges,adj,emap,ekey,pos,maxLeaf,maxDepth,path,factors,tasks:chosen,labelOf:id=>nodes[id].label};
+}
+
+/* ============ notation rendering ============ */
+const L=id=>SC.labelOf(id);
+function poseHTML(from,to,inv){
+  const core='<span class="pre">'+L(from)+'</span>P<span class="post">'+L(to)+'</span>';
+  return inv ? '<span class="pose i">('+core+')<sup>-1</sup></span>'
+             : '<span class="pose g">'+core+'</span>';
+}
+function posePlain(from,to){ return '<span class="pose"><span class="pre">'+L(from)+'</span>P<span class="post">'+L(to)+'</span></span>'; }
+function productHTML(fs){ return fs.map(f=>poseHTML(f.from,f.to,f.inv)).join('<span class="op">&#183;</span>'); }
+function pathText(p){ return p.map(id=>L(id)).join(' &#8594; '); }
+
+/* ============ SVG diagram ============ */
+const NS='http://www.w3.org/2000/svg';
+function svgEl(tag,attrs,inner){ let s='<'+tag; for(const k in attrs) s+=' '+k+'="'+attrs[k]+'"'; s+= inner!=null?'>'+inner+'</'+tag+'>':'/>'; return s; }
+function svgPoseLabel(x,y,from,to,color,fs){
+  fs=fs||14; const sub=Math.round(fs*0.72), d=Math.round(fs*0.42);
+  return '<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" fill="'+color+'" font-size="'+fs+'" font-family="inherit" text-anchor="middle" font-weight="600">'
+    +'<tspan font-size="'+sub+'" dy="-'+d+'">'+L(from)+'</tspan><tspan dy="'+d+'">P</tspan>'
+    +'<tspan font-size="'+sub+'" dy="'+(d-1)+'">'+L(to)+'</tspan><tspan dy="-'+(d-1)+'"></tspan></text>';
+}
+
+function nodeXY(id){
+  const VW=1000,VH=560,padX=90,padY=80;
+  const gx=SC.pos[id].gx, dp=SC.pos[id].depth;
+  const x = SC.maxLeaf===0 ? VW/2 : padX + gx/SC.maxLeaf*(VW-2*padX);
+  const y = SC.maxDepth===0 ? VH/2 : padY + dp/SC.maxDepth*(VH-2*padY);
+  return [x,y];
+}
+
+function render(){
+  let onPath=new Set(), pathEdges=new Set();
+  if(sel.length===2){
+    const {p}=SC.factors(sel[0],sel[1]);
+    p.forEach(id=>onPath.add(id));
+    for(let i=0;i<p.length-1;i++){ const u=p[i],v=p[i+1]; pathEdges.add(SC.ekey(u,v)); }
+  }
+  let svg='';
+  // adaptive node size so large trees stay readable
+  const VW=1000,VH=560,padX=90,padY=80;
+  const hsp=SC.maxLeaf>0?(VW-2*padX)/SC.maxLeaf:VW;
+  const vsp=SC.maxDepth>0?(VH-2*padY)/SC.maxDepth:VH;
+  const R=Math.max(8,Math.min(22,0.42*Math.min(hsp,vsp)));
+  const fMain=Math.max(9,R*0.78), fLab=Math.max(8,Math.min(14,R*0.66)), loff=Math.max(11,R*0.7);
+
+  // edges
+  SC.edges.forEach(e=>{
+    const [ax,ay]=nodeXY(e.a), [bx,by]=nodeXY(e.b);
+    const hot=pathEdges.has(SC.ekey(e.a,e.b));
+    // arrow points from measured-from to measured-to
+    const [fx,fy]=nodeXY(e.m[0]), [tx,ty]=nodeXY(e.m[1]);
+    const ang=Math.atan2(ty-fy,tx-fx);
+    const sx=fx+Math.cos(ang)*R, sy=fy+Math.sin(ang)*R;
+    const ex=tx-Math.cos(ang)*R, ey=ty-Math.sin(ang)*R;
+    const col=hot?'#4fb6d9':'#3a496b';
+    const w=hot?3:2;
+    // arrowhead
+    const hl=12,hw=6;
+    const p1=(ex-hl*Math.cos(ang)+hw*Math.sin(ang)).toFixed(1)+','+(ey-hl*Math.sin(ang)-hw*Math.cos(ang)).toFixed(1);
+    const p2=(ex-hl*Math.cos(ang)-hw*Math.sin(ang)).toFixed(1)+','+(ey-hl*Math.sin(ang)+hw*Math.cos(ang)).toFixed(1);
+    svg+=svgEl('line',{x1:sx.toFixed(1),y1:sy.toFixed(1),x2:ex.toFixed(1),y2:ey.toFixed(1),stroke:col,'stroke-width':w});
+    svg+=svgEl('polygon',{points:ex.toFixed(1)+','+ey.toFixed(1)+' '+p1+' '+p2,fill:col});
+    // label offset perpendicular to the edge
+    const mx=(fx+tx)/2, my=(fy+ty)/2, px=-Math.sin(ang), py=Math.cos(ang);
+    svg+=svgPoseLabel(mx+px*loff, my+py*loff+4, e.m[0], e.m[1], hot?'#7fd4ee':'#8ea0c4', fLab);
+  });
+
+  // nodes
+  SC.nodes.forEach(nd=>{
+    const [x,y]=nodeXY(nd.id);
+    let fill='#101a30', stroke='#4fb6d9', tcol='#e6ecf7', sw=2;
+    if(sel[0]===nd.id){ stroke='#35d07f'; tcol='#35d07f'; sw=3; }
+    else if(sel[1]===nd.id){ stroke='#ff4d6d'; tcol='#ff4d6d'; sw=3; }
+    else if(onPath.has(nd.id)){ stroke='#7fd4ee'; }
+    if(nd.id===0){ fill='#132235'; }   // root a touch brighter
+    svg+=svgEl('g',{'data-node':nd.id,style:'cursor:pointer'},
+        svgEl('circle',{cx:x.toFixed(1),cy:y.toFixed(1),r:R.toFixed(1),fill,stroke,'stroke-width':sw})
+      + '<text x="'+x.toFixed(1)+'" y="'+(y+1).toFixed(1)+'" fill="'+tcol+'" font-size="'+fMain.toFixed(1)+'" font-family="inherit" font-weight="700" text-anchor="middle" dominant-baseline="middle">'+nd.label+'</text>'
+      + (nd.id===0?'<text x="'+x.toFixed(1)+'" y="'+(y-R-9).toFixed(1)+'" fill="#5f6f92" font-size="10" font-family="inherit" text-anchor="middle">Basis</text>':''));
+  });
+
+  document.getElementById('scene').innerHTML=svg;
+  renderSelection();
+}
+
+function renderSelection(){
+  const box=document.getElementById('selbox');
+  if(sel.length===0){ box.innerHTML='<span class="lead">Klicke ein <b>Start&#8209;</b> und ein <b>Zielsystem</b>, um deren Relativpose herzuleiten.</span>'; return; }
+  if(sel.length===1){ box.innerHTML='<span class="lead">Start:</span> <span class="chip src">'+L(sel[0])+'</span> <span class="lead">&#8230; jetzt Zielsystem wählen</span>'; return; }
+  const {p,fs}=SC.factors(sel[0],sel[1]);
+  const target=posePlain(sel[0],sel[1]);
+  box.innerHTML='<span class="chip src">'+L(sel[0])+'</span><span class="chip dst">'+L(sel[1])+'</span>'
+    +'<span class="res">'+target+' <span class="op">=</span> '+productHTML(fs)+'</span>'
+    +'<span class="lead" style="width:100%">Weg: '+pathText(p)+'</span>';
+}
+
+/* ============ side panels ============ */
+function buildPanels(){
+  // given measurements
+  let g='';
+  SC.edges.forEach((e,idx)=>{ g+='<li><span class="mm">'+(idx+1)+'.</span>'+poseHTML(e.m[0],e.m[1],false)
+      +'<span class="mm">&#8211; '+L(e.m[0])+' misst '+L(e.m[1])+'</span></li>'; });
+  document.getElementById('given').innerHTML=g;
+
+  // tasks + solutions
+  let t='';
+  SC.tasks.forEach(task=>{
+    const {p,fs}=SC.factors(task.x,task.y);
+    t+='<li><div class="q">Gesuchte Pose: '+posePlain(task.x,task.y)+'</div>'
+      +'<div class="sol solItem hidden"><div class="path">Weg: '+pathText(p)+'</div>'
+      +posePlain(task.x,task.y)+' <span class="op">=</span> '+productHTML(fs)+'</div></li>';
+  });
+  document.getElementById('tasks').innerHTML=t;
+  applySolVisibility();
+}
+let showSol=false;
+function applySolVisibility(){ document.querySelectorAll('.solItem').forEach(e=>e.classList.toggle('hidden',!showSol)); }
+
+/* ============ UI wiring ============ */
+const nfEl=document.getElementById('nf'), nfv=document.getElementById('nfv'), nfhint=document.getElementById('nfhint');
+function getN(){ return Math.max(3, Math.floor(+nfv.value)||3); }   // typeable, no upper limit
+function regenerate(seed){
+  const s=seed!=null?seed:Math.floor(Math.random()*1e9);
+  RND=mulberry32(s);
+  document.getElementById('seed').textContent=s;
+  const n=getN();
+  nfhint.textContent = n>+nfEl.max ? '(viele Systeme)' : '';
+  sel=[];
+  SC=genScenario(n);
+  render(); buildPanels();
+}
+nfEl.addEventListener('input',()=>{ nfv.value=nfEl.value; regenerate(); });
+nfv.addEventListener('change',()=>{ nfv.value=getN(); nfEl.value=Math.min(getN(),+nfEl.max); regenerate(); });
+document.getElementById('gen').addEventListener('click',()=>regenerate());
+document.getElementById('sol').addEventListener('click',e=>{
+  showSol=!showSol; applySolVisibility();
+  e.target.textContent=showSol?'Lösung verbergen':'Lösung anzeigen';
+});
+
+const scene=document.getElementById('scene');
+scene.addEventListener('click',e=>{
+  const g=e.target.closest&&e.target.closest('[data-node]');
+  if(!g){ sel=[]; render(); return; }               // click empty -> clear
+  const id=+g.getAttribute('data-node');
+  if(sel.length===0) sel=[id];
+  else if(sel.length===1){ if(id===sel[0]) sel=[]; else sel=[sel[0],id]; }
+  else sel=[id];                                     // start a new selection
+  render();
+});
+
+regenerate(30703);
+</script>
+</body>
+</html>
