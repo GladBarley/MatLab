@@ -1,0 +1,242 @@
+﻿<robot
+  name="THWSGripper">
+  <link
+    name="Blindconnector">
+    <inertial>
+      <origin
+        xyz="0 0 0.04"
+        rpy="0 0 0.01" />
+      <mass
+        value="0.4" />
+      <inertia
+        ixx="0.1"
+        ixy="0.1"
+        ixz="0.1"
+        iyy="0.1"
+        iyz="0.1"
+        izz="0.1" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://THWSGripper/meshes/GreiferBase.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.3 0.3 0.3 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://THWSGripper/meshes/GreiferBase.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="GreiferBase">
+    <inertial>
+      <origin
+        xyz="0 0 0.04"
+        rpy="0 0 0" />
+      <mass
+        value="0.4" />
+      <inertia
+        ixx="0.005"
+        ixy="0.005"
+        ixz="0.005"
+        iyy="0.005"
+        iyz="0.005"
+        izz="0.005" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://THWSGripper/meshes/GreiferBase.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.3 0.3 0.3 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://THWSGripper/meshes/GreiferBase.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="basejoint"
+    type="fixed">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="Blindconnector" />
+    <child
+      link="GreiferBase" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="Clamp_L">
+    <inertial>
+      <origin
+        xyz="0 0 0.04"
+        rpy="0 0 0" />
+      <mass
+        value="0.007" />
+      <inertia
+        ixx="0.005"
+        ixy="0.005"
+        ixz="0.005"
+        iyy="0.005"
+        iyz="0.005"
+        izz="0.005" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://THWSGripper/meshes/Clamp_L.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.7 0.7 0.7 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://THWSGripper/meshes/Clamp_L.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Clamp_Joint_L"
+    type="prismatic">
+    <origin
+      xyz="-0.055 0 0.074"
+      rpy="0 0 0" />
+    <parent
+      link="GreiferBase" />
+    <child
+      link="Clamp_L" />
+    <axis
+      xyz="-1 0 0" />
+    <limit
+	  lower="0"
+      upper="0.725"
+      velocity="2.0"
+      effort="1000" />
+  </joint>
+  <link
+    name="Clamp_R">
+    <inertial>
+      <origin
+        xyz="0 0 0.04"
+        rpy="0 0 0" />
+      <mass
+        value="0.007" />
+      <inertia
+        ixx="0.005"
+        ixy="0.005"
+        ixz="0.005"
+        iyy="0.005"
+        iyz="0.005"
+        izz="0.005" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://THWSGripper/meshes/Clamp_R.stl" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.7 0.7 0.7 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://THWSGripper/meshes/Clamp_R.stl" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Clamp_Joint_R"
+    type="prismatic">
+    <origin
+      xyz="0.055 0 0.074"
+      rpy="0 0 0" />
+    <parent
+      link="GreiferBase" />
+    <child
+      link="Clamp_R" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+	  lower="0"
+      upper="0.725"
+      velocity="2.0"
+      effort="1000" />
+  </joint>
+<link
+    name="TCP">
+    <inertial>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.0" />
+      <inertia
+        ixx="0.00"
+        ixy="0.00"
+        ixz="0.00"
+        iyy="0.00"
+        iyz="0.00"
+        izz="0.00" />
+    </inertial>
+  </link>
+  <joint
+    name="TCPJoint"
+    type="fixed">
+    <origin
+      xyz="0 0 0.134"
+      rpy="0 0 0" />
+    <parent
+      link="GreiferBase" />
+    <child
+      link="TCP" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+</robot>
