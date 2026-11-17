@@ -261,7 +261,7 @@ end %[output:group:9ebe3303]
 % Black - detect object and draw properties
 try %[output:group:36e4398b]
     figure(f9); % ensure ellipses/markers are drawn onto the Gripper poses image
-    m_black = imblobs(k_thresh,'area',[500,3000]); % max 3000, sonst kommen große dunkle Flächen mit
+    m_black = imblobs(k_thresh,'area',[500,3000]); % max 3000
     m_black.plot_ellipse('edgecolor','y','LineWidth', linewidth); %[output:51106d72]
     m_black.plot('p', 'MarkerSize', markersize, 'MarkerFaceColor','k', 'MarkerEdgeColor','w', 'LineWidth', linewidth); %[output:51106d72]
 
